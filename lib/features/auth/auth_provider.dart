@@ -11,9 +11,13 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
     // Listen to auth state changes
     FirebaseAuth.instance.authStateChanges().listen((user) {
-      state = AsyncValue.data(user);
+      if (mounted) {
+        state = AsyncValue.data(user);
+      }
     }, onError: (error, stack) {
-      state = AsyncValue.error(error, stack);
+      if (mounted) {
+        state = AsyncValue.error(error, stack);
+      }
     });
   }
 
@@ -26,7 +30,9 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       );
       // State updates automatically via the listener
     } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
+      if (mounted) {
+        state = AsyncValue.error(e, stack);
+      }
     }
   }
 
@@ -39,7 +45,9 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       );
       // State updates automatically via the listener
     } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
+      if (mounted) {
+        state = AsyncValue.error(e, stack);
+      }
     }
   }
 
@@ -48,7 +56,9 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       await FirebaseAuth.instance.signOut();
       // State updates automatically via the listener
     } catch (e, stack) {
-      state = AsyncValue.error(e, stack);
+      if (mounted) {
+        state = AsyncValue.error(e, stack);
+      }
     }
   }
 }
