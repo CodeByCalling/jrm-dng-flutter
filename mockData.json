@@ -1,0 +1,198 @@
+[
+  {
+    "uid": "pastor_001",
+    "fullName": "Senior Pastor John",
+    "role": "pastor",
+    "dngStatus": "Senior Pastor",
+    "leaderId": null,
+    "discipleIds": [
+      "leader_101",
+      "leader_102",
+      "leader_103"
+    ],
+    "generationLevel": 0
+  },
+  {
+    "uid": "leader_101",
+    "fullName": "Leader Peter (G1)",
+    "role": "leader",
+    "dngStatus": "G12 Leader",
+    "leaderId": "pastor_001",
+    "discipleIds": [
+      "disciple_201",
+      "disciple_202",
+      "disciple_203",
+      "disciple_204"
+    ],
+    "generationLevel": 1
+  },
+  {
+    "uid": "leader_102",
+    "fullName": "Leader James (G1)",
+    "role": "leader",
+    "dngStatus": "G12 Leader",
+    "leaderId": "pastor_001",
+    "discipleIds": [
+      "disciple_205",
+      "disciple_206",
+      "disciple_207",
+      "disciple_208"
+    ],
+    "generationLevel": 1
+  },
+  {
+    "uid": "leader_103",
+    "fullName": "Leader John (G1)",
+    "role": "leader",
+    "dngStatus": "G12 Leader",
+    "leaderId": "pastor_001",
+    "discipleIds": [
+      "disciple_209",
+      "disciple_210",
+      "disciple_211",
+      "disciple_212"
+    ],
+    "generationLevel": 1
+  },
+  {
+    "uid": "disciple_201",
+    "fullName": "Disciple Matthew (G2 - Branch Root)",
+    "role": "leader",
+    "dngStatus": "Cell Leader",
+    "leaderId": "leader_101",
+    "discipleIds": [
+      "disciple_301"
+    ],
+    "generationLevel": 2
+  },
+  {
+    "uid": "disciple_202",
+    "fullName": "Disciple Mark (G2)",
+    "role": "member",
+    "dngStatus": "Phase 1",
+    "leaderId": "leader_101",
+    "discipleIds": [],
+    "generationLevel": 2
+  },
+  {
+    "uid": "disciple_203",
+    "fullName": "Disciple Luke (G2)",
+    "role": "member",
+    "dngStatus": "Phase 1",
+    "leaderId": "leader_101",
+    "discipleIds": [],
+    "generationLevel": 2
+  },
+  {
+    "uid": "disciple_204",
+    "fullName": "Disciple John (G2)",
+    "role": "member",
+    "dngStatus": "Phase 1",
+    "leaderId": "leader_101",
+    "discipleIds": [],
+    "generationLevel": 2
+  },
+  {
+    "uid": "disciple_205",
+    "fullName": "Disciple Andrew (G2)",
+    "role": "member",
+    "dngStatus": "Phase 1",
+    "leaderId": "leader_102",
+    "discipleIds": [],
+    "generationLevel": 2
+  },
+  {
+    "uid": "disciple_206",
+    "fullName": "Disciple Philip (G2)",
+    "role": "member",
+    "dngStatus": "Phase 1",
+    "leaderId": "leader_102",
+    "discipleIds": [],
+    "generationLevel": 2
+  },
+  {
+    "uid": "disciple_207",
+    "fullName": "Disciple Bartholomew (G2)",
+    "role": "member",
+    "dngStatus": "Phase 1",
+    "leaderId": "leader_102",
+    "discipleIds": [],
+    "generationLevel": 2
+  },
+  {
+    "uid": "disciple_208",
+    "fullName": "Disciple Thomas (G2)",
+    "role": "member",
+    "dngStatus": "Phase 1",
+    "leaderId": "leader_102",
+    "discipleIds": [],
+    "generationLevel": 2
+  },
+  {
+    "uid": "disciple_209",
+    "fullName": "Disciple Simon (G2)",
+    "role": "member",
+    "dngStatus": "Phase 1",
+    "leaderId": "leader_103",
+    "discipleIds": [],
+    "generationLevel": 2
+  },
+  {
+    "uid": "disciple_210",
+    "fullName": "Disciple Thaddeus (G2)",
+    "role": "member",
+    "dngStatus": "Phase 1",
+    "leaderId": "leader_103",
+    "discipleIds": [],
+    "generationLevel": 2
+  },
+  {
+    "uid": "disciple_211",
+    "fullName": "Disciple James Al (G2)",
+    "role": "member",
+    "dngStatus": "Phase 1",
+    "leaderId": "leader_103",
+    "discipleIds": [],
+    "generationLevel": 2
+  },
+  {
+    "uid": "disciple_212",
+    "fullName": "Disciple Judas (G2)",
+    "role": "member",
+    "dngStatus": "Phase 1",
+    "leaderId": "leader_103",
+    "discipleIds": [],
+    "generationLevel": 2
+  },
+  {
+    "uid": "disciple_301",
+    "fullName": "Disciple Timothy (G3)",
+    "role": "leader",
+    "dngStatus": "Life Class",
+    "leaderId": "disciple_201",
+    "discipleIds": [
+      "disciple_401"
+    ],
+    "generationLevel": 3
+  },
+  {
+    "uid": "disciple_401",
+    "fullName": "Disciple Titus (G4)",
+    "role": "leader",
+    "dngStatus": "Pre-Encounter",
+    "leaderId": "disciple_301",
+    "discipleIds": [
+      "disciple_501"
+    ],
+    "generationLevel": 4
+  },
+  {
+    "uid": "disciple_501",
+    "fullName": "Disciple Philemon (G5)",
+    "role": "member",
+    "dngStatus": "New Believer",
+    "leaderId": "disciple_401",
+    "discipleIds": [],
+    "generationLevel": 5
+  }
+]

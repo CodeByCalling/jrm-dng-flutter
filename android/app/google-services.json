@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "219102672112",
+    "project_id": "jrm-member-dng-portal",
+    "storage_bucket": "jrm-member-dng-portal.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:219102672112:android:564e4553de198faa2b3e35",
+        "android_client_info": {
+          "package_name": "com.jrm.jrm_dng_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCR8ZyVpdfYVfc9Y31xZS85bxmt2Vdk4Ik"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
