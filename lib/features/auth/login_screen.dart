@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/foundation.dart';
 import 'package:jrm_dng_flutter/features/auth/auth_provider.dart';
+import 'package:jrm_dng_flutter/core/services/seeder_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -14,7 +16,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -25,23 +26,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
       try {
         await ref.read(authProvider.notifier).login(
               _emailController.text.trim(),
               _passwordController.text.trim(),
             );
-        if (mounted) {
-          context.go('/membership');
-        }
+        // Navigation is handled by the Router listening to authProvider state
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login Failed: $e')),
+            SnackBar(
+              content: Text('Login failed: ${e.toString()}'),
+              backgroundColor: Colors.redAccent,
+            ),
           );
         }
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
       }
     }
   }
@@ -51,6 +50,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     const midnightBlue = Color(0xFF191970);
     const gold = Color(0xFFFFD700);
 
+    final authState = ref.watch(authProvider);
+    final isLoading = authState.isLoading;
+
     return Scaffold(
       backgroundColor: midnightBlue,
       body: Center(
@@ -59,7 +61,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo or Placeholder
               const Icon(Icons.church, size: 80, color: gold),
               const SizedBox(height: 20),
               Text(
@@ -130,7 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _login,
+                        onPressed: isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: gold,
                           foregroundColor: midnightBlue,
@@ -138,7 +139,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: _isLoading
+                        child: isLoading
                             ? const CircularProgressIndicator(color: midnightBlue)
                             : const Text(
                                 'Sign In',
@@ -176,6 +177,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ),
       ),
+      floatingActionButton: kDebugMode
+          ? FloatingActionButton(
+              backgroundColor: Colors.white24,
+              child: const Icon(Icons.bug_report, color: gold),
+              onPressed: () async {
+                try {
+                  await SeederService().seedGen3Hierarchy();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Seeding Complete')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Seeding Failed: $e')),
+                    );
+                  }
+                }
+              },
+            )
+          : null,
     );
   }
 }

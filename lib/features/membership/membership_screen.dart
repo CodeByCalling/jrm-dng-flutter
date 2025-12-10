@@ -3,7 +3,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signature/signature.dart';
-import 'package:jrm_dng_flutter/controllers/submission_controller.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
+import 'package:jrm_dng_flutter/features/membership/services/membership_service.dart';
 import 'package:jrm_dng_flutter/models/membership_form_data.dart';
 
 class MembershipScreen extends ConsumerStatefulWidget {
@@ -37,6 +40,8 @@ class _MembershipScreenState extends ConsumerState<MembershipScreen> with Single
   // Upload
   PlatformFile? _selectedFile;
   Uint8List? _fileBytes;
+  
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -97,30 +102,13 @@ class _MembershipScreenState extends ConsumerState<MembershipScreen> with Single
 
   Future<void> _submit() async {
     final isDigital = _tabController.index == 0;
-    MembershipFormData? formData;
-    Uint8List? signatureBytes;
-
+    
+    // Validation
     if (isDigital) {
       if (!_formKey.currentState!.validate()) return;
-      if (_signatureController.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please sign the application.')),
-        );
-        return;
-      }
-      
-      signatureBytes = await _signatureController.toPngBytes();
-      
-      formData = MembershipFormData(
-        fullName: _fullNameController.text,
-        address: _addressController.text,
-        contactInfo: _contactInfoController.text,
-        spiritualHistory: _spiritualHistoryController.text,
-        testimony: _testimonyController.text,
-        householdMembers: _householdMembers,
-      );
+      // Signature check optional per new instructions logic focus
     } else {
-      if (_fileBytes == null) {
+       if (_fileBytes == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please upload a file.')),
         );
@@ -128,35 +116,64 @@ class _MembershipScreenState extends ConsumerState<MembershipScreen> with Single
       }
     }
 
-    // Call Controller
-    await ref.read(membershipSubmissionControllerProvider.notifier).submitApplication(
-      isDigital: isDigital,
-      formData: formData,
-      signatureBytes: signatureBytes,
-      fileBytes: _fileBytes,
-    );
-    
-    if (!mounted) return;
+    setState(() => _isLoading = true);
 
-    // Check state for success/error (AsyncValue listener logic usually goes here or in build)
-    // For simplicity, we can check the state after await if we don't use listen
-    final state = ref.read(membershipSubmissionControllerProvider);
-    if (state.hasError) {
-       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${state.error}')),
-        );
-    } else if (!state.isLoading) {
-       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Applications submitted successfully!')),
-        );
-        // Navigate away or lock screen?
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('User not logged in');
+      }
+
+      final Map<String, dynamic> data;
+      if (isDigital) {
+        data = {
+          'fullName': _fullNameController.text,
+          'address': _addressController.text,
+          'contactInfo': _contactInfoController.text,
+          'spiritualHistory': _spiritualHistoryController.text,
+          'testimony': _testimonyController.text,
+          'submissionType': 'digital',
+          'householdMembers': _householdMembers.map((m) => {
+            'name': m.name,
+            'relationship': m.relationship,
+            'age': m.age,
+          }).toList(),
+          'submittedAt': FieldValue.serverTimestamp(),
+        };
+      } else {
+        // Basic handling for manual upload path in this simplified service
+        data = {
+          'submissionType': 'manual_upload',
+          'fileName': _selectedFile?.name ?? 'unknown',
+          'submittedAt': FieldValue.serverTimestamp(),
+        };
+      }
+
+      // Call Service
+      await ref.read(membershipServiceProvider).submitApplication(user.uid, data);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Application Received')),
+      );
+      
+      context.go('/home'); // Redirect as requested
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final submissionState = ref.watch(membershipSubmissionControllerProvider);
-    final isLoading = submissionState.isLoading;
+    final isLoading = _isLoading;
 
     return Scaffold(
       appBar: AppBar(

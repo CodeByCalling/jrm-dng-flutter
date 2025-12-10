@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:jrm_dng_flutter/models/tree_node.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:jrm_dng_flutter/features/dng/services/tree_service.dart';
 
-class DiscipleshipTreeWidget extends StatefulWidget {
-  final TreeNode rootNode;
-
-  const DiscipleshipTreeWidget({super.key, required this.rootNode});
+class DiscipleshipTreeWidget extends ConsumerStatefulWidget {
+  const DiscipleshipTreeWidget({super.key});
 
   @override
-  State<DiscipleshipTreeWidget> createState() => _DiscipleshipTreeWidgetState();
+  ConsumerState<DiscipleshipTreeWidget> createState() =>
+      _DiscipleshipTreeWidgetState();
 }
 
-class _DiscipleshipTreeWidgetState extends State<DiscipleshipTreeWidget> {
+class _DiscipleshipTreeWidgetState extends ConsumerState<DiscipleshipTreeWidget> {
   // Config
   static const double nodeSize = 60.0;
   static const double verticalSpacing = 80.0;
@@ -18,8 +18,35 @@ class _DiscipleshipTreeWidgetState extends State<DiscipleshipTreeWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final treeAsync = ref.watch(dngTreeProvider);
+
+    return treeAsync.when(
+      data: (rootNode) {
+        if (rootNode == null) {
+          return const Center(child: Text('No DNG data found.'));
+        }
+        return _buildTree(rootNode);
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('Could not load tree'),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => ref.refresh(dngTreeProvider),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTree(TreeModel rootNode) {
     // 1. Calculate the layout
-    final layout = _calculateLayout(widget.rootNode);
+    final layout = _calculateLayout(rootNode);
     final size = layout.size;
     final nodePositions = layout.positions;
 
@@ -60,7 +87,7 @@ class _DiscipleshipTreeWidgetState extends State<DiscipleshipTreeWidget> {
     );
   }
 
-  Widget _buildNodeWidget(TreeNode node) {
+  Widget _buildNodeWidget(TreeModel node) {
     return GestureDetector(
       onTap: () => _showNodeDetails(node),
       child: Container(
@@ -71,7 +98,7 @@ class _DiscipleshipTreeWidgetState extends State<DiscipleshipTreeWidget> {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(50),
+              color: Colors.black.withOpacity(0.2), // Fixed deprecated withAlpha
               blurRadius: 5,
               offset: const Offset(0, 3),
             ),
@@ -90,7 +117,7 @@ class _DiscipleshipTreeWidgetState extends State<DiscipleshipTreeWidget> {
     );
   }
 
-  void _showNodeDetails(TreeNode node) {
+  void _showNodeDetails(TreeModel node) {
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -106,12 +133,13 @@ class _DiscipleshipTreeWidgetState extends State<DiscipleshipTreeWidget> {
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 8),
-              Text(
-                node.role,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-              ),
+              if (node.email != null)
+                Text(
+                  node.email!,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                ),
               const SizedBox(height: 16),
               if (node.children.isNotEmpty)
                 Text(
@@ -127,16 +155,13 @@ class _DiscipleshipTreeWidgetState extends State<DiscipleshipTreeWidget> {
 
   // --- Layout Algorithm ---
 
-  _TreeLayout _calculateLayout(TreeNode root) {
+  _TreeLayout _calculateLayout(TreeModel root) {
     // 1. Calculate widths recursively
-    final nodeWidths = <TreeNode, double>{};
+    final nodeWidths = <TreeModel, double>{};
     _calculateRequiredWidth(root, nodeWidths);
 
     // 2. Assign positions recursively
-    final positions = <TreeNode, Offset>{};
-    // Center the root horizontally in its required width
-    // Actually, we can just start at 0,0 relative, then shift everything if needed?
-    // Better: Helper function that returns the subtree's bounding box center
+    final positions = <TreeModel, Offset>{};
     _assignPositions(root, 0, 0, positions, nodeWidths);
 
     // 3. Determine total size
@@ -155,7 +180,7 @@ class _DiscipleshipTreeWidgetState extends State<DiscipleshipTreeWidget> {
 
   // Post-order traversal to calculate width needed for each subtree
   double _calculateRequiredWidth(
-      TreeNode node, Map<TreeNode, double> nodeWidths) {
+      TreeModel node, Map<TreeModel, double> nodeWidths) {
     if (node.children.isEmpty) {
       nodeWidths[node] = nodeSize + horizontalSpacing;
       return nodeSize + horizontalSpacing;
@@ -171,8 +196,8 @@ class _DiscipleshipTreeWidgetState extends State<DiscipleshipTreeWidget> {
 
   // Pre-order traversal to assign positions
   // xOffset: The starting X coordinate for this node's subtree allocation range
-  void _assignPositions(TreeNode node, double xOffset, double yLevel,
-      Map<TreeNode, Offset> positions, Map<TreeNode, double> nodeWidths) {
+  void _assignPositions(TreeModel node, double xOffset, double yLevel,
+      Map<TreeModel, Offset> positions, Map<TreeModel, double> nodeWidths) {
     
     // The node acts as a parent. It should be centered above its children.
     // The children occupy the range [xOffset, xOffset + childrenWidth]
@@ -180,12 +205,7 @@ class _DiscipleshipTreeWidgetState extends State<DiscipleshipTreeWidget> {
     double myX;
     
     if (node.children.isEmpty) {
-      // If leaf, just place it in the center of its 'slot' (which is nodeSize+spacing)
-      // Actually, we allocated 'nodeSize + horizontalSpacing' for it.
-      // So center at xOffset + (allocated/2) - (nodeSize/2)
-      // Simplifying: let's just use top-left coordinates for logic and center visually? 
-      // Let's stick to placing the top-left corner of the node widget.
-      
+      // If leaf, place it in the center of its 'slot'
       double allocated = nodeWidths[node]!;
       myX = xOffset + (allocated - nodeSize) / 2;
     } else {
@@ -216,13 +236,13 @@ class _DiscipleshipTreeWidgetState extends State<DiscipleshipTreeWidget> {
 
 class _TreeLayout {
   final Size size;
-  final Map<TreeNode, Offset> positions;
+  final Map<TreeModel, Offset> positions;
 
   _TreeLayout({required this.size, required this.positions});
 }
 
 class _TreeLinePainter extends CustomPainter {
-  final Map<TreeNode, Offset> nodePositions;
+  final Map<TreeModel, Offset> nodePositions;
   final double nodeSize;
   final Paint linePaint;
 

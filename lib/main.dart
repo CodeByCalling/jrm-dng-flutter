@@ -17,7 +17,11 @@ import 'features/dng/leader_request_screen.dart';
 import 'features/classes/class_viewer_screen.dart';
 import 'features/meetings/log_meeting_screen.dart';
 import 'features/dng/widgets/discipleship_tree_widget.dart';
-import 'package:jrm_dng_flutter/models/tree_node.dart'; // For dummy data
+import 'features/auth/auth_provider.dart';
+import 'features/membership/pages/membership_locked_page.dart';
+
+// Models
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,98 +39,137 @@ void main() async {
 const Color _primaryColor = Color(0xFF191970); // Deep Midnight Blue
 const Color _accentColor = Color(0xFFFFD700); // Warm Gold
 
-// GoRouter Configuration
-final _router = GoRouter(
-  initialLocation: '/',
-  routes: [
-    ShellRoute(
-      builder: (context, state, child) {
-        // This ShellRoute wraps ALL pages with the DevDrawer? 
-        // No, the user only asked to wrap HomeScreen. 
-        // But the DevDrawer has navigation to everything.
-        // If we wrap everything, we get a persistent drawer, which is nice for dev.
-        // However, user specifically said "Wrap the `HomeScreen` in a `Scaffold` with a `Drawer`."
-        // I will follow specific instruction for HomeScreen, but let's define the Drawer widget first.
-        return child;
-      },
-      routes: [
-         GoRoute(
-          path: '/',
-          builder: (context, state) => const DevScaffold(
-            body: HomeScreen(),
+// GoRouter Configuration Provider
+final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authProvider);
+
+  return GoRouter(
+    initialLocation: '/',
+    redirect: (context, state) {
+      final isLoading = authState.isLoading;
+      final isAuthenticated = authState.isAuthenticated;
+      final isOfficialMember = authState.isOfficialMember;
+      final path = state.uri.path;
+
+      // 1. Loading
+      // Only redirect to splash if we are NOT on a login/register page.
+      // We want to keep the user on the login page while the auth request is processing.
+      if (isLoading) {
+        if (path == '/login' || path == '/register') return null; 
+        if (path != '/splash') return '/splash';
+        return null;
+      }
+
+      // 2. Auth Guard
+      // If NOT authenticated
+      if (!isAuthenticated) {
+        // If on a protected path (or dashboard), send to login logic or home
+        // For this app, let's say unknown users go to Login if they try to access Dashboard
+        if (path.startsWith('/dashboard') || 
+            path == '/profile' || 
+            path == '/tree' ||
+            path == '/requests' ||
+            path == '/log-meeting') {
+             return '/login';
+        }
+        
+        // If just finished loading and was on splash -> go home
+        if (path == '/splash') return '/';
+        
+        return null;
+      }
+
+      // 3. Authenticated
+      if (isAuthenticated) {
+        // If user is on an auth page, splash, or root -> Force correct destination
+        final isAuthPage = path == '/login' || path == '/register';
+        final isSplash = path == '/splash';
+        final isRoot = path == '/';
+
+        if (isAuthPage || isSplash) {
+           return isOfficialMember ? '/dashboard' : '/membership-locked';
+        }
+
+        // 4. Membership Guard for Dashboard
+        if (path.startsWith('/dashboard') && !isOfficialMember) {
+           return '/membership-locked';
+        }
+      }
+
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      GoRoute(
+        path: '/membership-locked',
+        builder: (context, state) => const MembershipLockedPage(),
+      ),
+      ShellRoute(
+        builder: (context, state, child) {
+          return child;
+        },
+        routes: [
+           GoRoute(
+            path: '/',
+            builder: (context, state) => const DevScaffold(
+              body: HomeScreen(),
+            ),
           ),
-        ),
-        GoRoute(
-          path: '/login',
-          builder: (context, state) => const LoginScreen(),
-        ),
-        GoRoute(
-          path: '/register',
-          builder: (context, state) => const RegisterScreen(),
-        ),
-        GoRoute(
-          path: '/membership',
-          builder: (context, state) => const MembershipScreen(),
-        ),
-        GoRoute(
-          path: '/dashboard',
-          builder: (context, state) => const DngDashboardScreen(),
-        ),
-        GoRoute(
-          path: '/profile',
-          builder: (context, state) => const DngProfileScreen(),
-        ),
-        GoRoute(
-          path: '/requests',
-          builder: (context, state) => const LeaderRequestScreen(),
-        ),
-        GoRoute(
-          path: '/class/:id',
-          builder: (context, state) {
-             final classId = state.pathParameters['id']!;
-             final title = state.uri.queryParameters['title'] ?? 'Class Details';
-             return ClassViewerScreen(classId: classId, title: title);
-          },
-        ),
-        GoRoute(
-          path: '/log-meeting',
-          builder: (context, state) => const LogMeetingScreen(),
-        ),
-        GoRoute(
-          path: '/tree',
-          builder: (context, state) {
-            // Dummy data for visual verification
-            final dummyTree = TreeNode(
-              name: 'Pastor John',
-              role: 'Senior Pastor',
-              children: [
-                TreeNode(
-                  name: 'Leader Mike', 
-                  role: 'Network Leader',
-                  children: [
-                     TreeNode(name: 'Disciple A', role: 'Member'),
-                     TreeNode(name: 'Disciple B', role: 'Member'),
-                  ]
-                ),
-                TreeNode(
-                  name: 'Leader Sarah', 
-                  role: 'Network Leader',
-                  children: [
-                     TreeNode(name: 'Disciple C', role: 'Member'),
-                  ]
-                ),
-              ],
-            );
-            return Scaffold(
-              appBar: AppBar(title: const Text('Discipleship Tree Preview')),
-              body: DiscipleshipTreeWidget(rootNode: dummyTree),
-            );
-          },
-        ),
-      ]
-    ),
-  ],
-);
+          GoRoute(
+            path: '/login',
+            builder: (context, state) => const LoginScreen(),
+          ),
+          GoRoute(
+            path: '/register',
+            builder: (context, state) => const RegisterScreen(),
+          ),
+          GoRoute(
+            path: '/membership',
+            builder: (context, state) => const MembershipScreen(),
+          ),
+          GoRoute(
+            path: '/dashboard',
+            builder: (context, state) => const DngDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/profile',
+            builder: (context, state) => const DngProfileScreen(),
+          ),
+          GoRoute(
+            path: '/requests',
+            builder: (context, state) => const LeaderRequestScreen(),
+          ),
+          GoRoute(
+            path: '/class/:id',
+            builder: (context, state) {
+               final classId = state.pathParameters['id']!;
+               final title = state.uri.queryParameters['title'] ?? 'Class Details';
+               return ClassViewerScreen(classId: classId, title: title);
+            },
+          ),
+          GoRoute(
+            path: '/log-meeting',
+            builder: (context, state) => const LogMeetingScreen(),
+          ),
+          GoRoute(
+            path: '/tree',
+            builder: (context, state) {
+              return Scaffold(
+                appBar: AppBar(title: const Text('Discipleship Tree')),
+                body: const DiscipleshipTreeWidget(),
+              );
+            },
+          ),
+        ]
+      ),
+    ],
+  );
+});
 
 // Dev Scaffold to wrap HomeScreen
 class DevScaffold extends StatelessWidget {
@@ -143,11 +186,11 @@ class DevScaffold extends StatelessWidget {
 }
 
 // THE DEV DRAWER
-class DevDrawer extends StatelessWidget {
+class DevDrawer extends ConsumerWidget {
   const DevDrawer({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -233,17 +276,31 @@ class DevDrawer extends StatelessWidget {
             title: const Text('Jump to Class 201'),
             onTap: () => context.push('/class/201?title=Class%20201:%20Foundations'),
           ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Force Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            onTap: () async {
+              await ref.read(authProvider.notifier).logout();
+              if (context.mounted) {
+                context.go('/');
+              }
+            },
+          ),
         ],
       ),
     );
   }
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the router provider
+    final router = ref.watch(routerProvider);
+
     return MaterialApp.router(
       title: 'JRM Members Portal',
       debugShowCheckedModeBanner: false,
@@ -275,7 +332,7 @@ class MyApp extends StatelessWidget {
           surfaceTintColor: Colors.white,
         ),
       ),
-      routerConfig: _router,
+      routerConfig: router,
     );
   }
 }
